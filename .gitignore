@@ -1,0 +1,30 @@
+# Secretos: nunca se suben, ni al repo privado. Ver docs/DECISIONES.md, DEC-02.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Build
+target/
+*.class
+*.log
+
+# Documentos subidos por la app en desarrollo (se sirven solo por /documento/{id})
+/almacen/
+
+# Reportes locales de pruebas y de ZAP
+/reportes/
+
+# IDE y sistema
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
+
+# Claude Code: los ajustes personales no se comparten
+.claude/settings.local.json
