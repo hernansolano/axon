@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/pro-marco :: marco('Consulta autorizada', ~{::main})}">
+<body>
+<!--/* Pantalla 17 (UI.md) con el diseño v4 (DEC-09, DEC-34). Solo llegan aquí las categorías del permiso: el
+       servidor filtra antes de armar la vista, así lo demás no viaja en el HTML (HU-08, RS-04, RS-05).
+       Cada 5 s el script pregunta el estado; si el permiso se cortó, quita la cartilla sin recargar (DEC-30). */-->
+<main class="pro-main">
+    <div class="consult" th:if="${acceso.vigente()}" data-consulta
+         th:data-estado-url="@{/pro/consulta/{id}/estado(id=${permisoId})}" data-testid="consulta">
+        <div data-consulta-contenido>
+            <div class="card consult-head">
+                <span class="avatar" aria-hidden="true" th:text="${acceso.vista.iniciales}">AC</span>
+                <div class="consult-who">
+                    <span class="consult-name" th:text="${acceso.vista.paciente}" data-testid="consulta-paciente">Ana Cedeño</span>
+                    <span class="consult-meta" th:text="${acceso.vista.proposito}">Entrega de resultados</span>
+                </div>
+                <div class="consult-time" data-contador data-sin-recarga th:data-restante="${acceso.vista.restanteSeg}"
+                     th:data-total="${acceso.vista.totalSeg}" data-testid="tiempo-restante">
+                    <span class="state state-activo"><span class="state-mark" aria-hidden="true"></span>Quedan
+                        <span data-restante-texto th:text="${acceso.vista.restante()}">37:05</span></span>
+                    <div class="bar bar-thin"><div class="bar-fill bar-ok" data-barra th:style="'width:' + ${acceso.vista.porcentaje()}"></div></div>
+                </div>
+            </div>
+
+            <div class="consult-note" data-testid="aviso-no-expediente">
+                <span class="icon" aria-hidden="true">info</span>
+                <span>Esta cartilla contiene <strong>lo que la paciente registró</strong>. No es un expediente clínico completo: la ausencia de un dato no significa ausencia de la condición.</span>
+            </div>
+
+            <div class="consult-body">
+                <div class="consult-main">
+                    <span class="summary-eyebrow">Autorizado por la paciente</span>
+                    <span class="consult-scope" th:text="${acceso.vista.alcanceTexto()}" data-testid="alcance-autorizado">Laboratorios y estudios</span>
+                    <p class="card empty-line" th:if="${acceso.vista.grupos.isEmpty()}" data-testid="consulta-vacia">
+                        La paciente no tiene registros en lo que autorizó.
+                    </p>
+                    <section class="card consult-group" th:each="g : ${acceso.vista.grupos}"
+                             th:attr="data-testid='grupo-' + ${g.categoria.slug}">
+                        <div class="group-head">
+                            <span class="tone" th:classappend="'tone-' + ${g.categoria.slug}">
+                                <span class="icon" aria-hidden="true" th:text="${g.categoria.icon}">biotech</span>
+                            </span>
+                            <h2 class="group-name" th:text="${g.categoria.label}">Laboratorios y estudios</h2>
+                        </div>
+                        <article class="consult-record" th:each="r : ${g.registros}" th:attr="data-testid='registro-' + ${r.id}">
+                            <span class="consult-record-title" th:text="${r.titulo}">Hemograma completo</span>
+                            <span class="consult-record-note" th:if="${r.detalle != null and !r.detalle.isBlank()}" th:text="${r.detalle}">Todo dentro de rango</span>
+                            <span class="record-meta" th:text="${r.meta}">diciembre 2025 · Laboratorio Santa Ana</span>
+                            <div class="consult-record-tags">
+                                <span class="chip chip-doc" th:if="${r.conDocumento}"
+                                      th:attr="data-testid='procedencia-' + ${r.id}" data-procedencia="con-documento">
+                                    <span class="icon fill" aria-hidden="true">description</span>Con documento · <span th:text="${r.tipoDocumento}">PDF</span>
+                                </span>
+                                <span class="chip chip-dicho" th:unless="${r.conDocumento}"
+                                      th:attr="data-testid='procedencia-' + ${r.id}" data-procedencia="autodeclarado">
+                                    <span class="icon" aria-hidden="true">chat_bubble</span>Lo dijo la paciente
+                                </span>
+                            </div>
+                            <details class="consult-doc" th:if="${r.conDocumento}">
+                                <summary class="btn btn-ghost btn-sm" th:attr="data-testid='abrir-documento-' + ${r.id}">
+                                    <span class="icon" aria-hidden="true">visibility</span>Abrir el documento
+                                </summary>
+                                <div class="viewer-frame" data-visor data-visor-diferido data-estado="cargando" data-testid="visor-documento"
+                                     th:data-src="@{/pro/consulta/{id}/documento/{doc}(id=${permisoId},doc=${r.documentoId})}"
+                                     th:data-tipo="${r.esPdf()} ? 'pdf' : 'imagen'">
+                                    <div class="viewer-state" data-visor-cargando aria-live="polite">
+                                        <span class="icon" aria-hidden="true">hourglass_top</span>
+                                        <span>Abriendo el documento…</span>
+                                    </div>
+                                    <div class="viewer-doc" data-visor-documento data-testid="visor-contenido" hidden></div>
+                                    <div class="viewer-state" data-visor-error data-testid="visor-error" role="alert" hidden>
+                                        <span class="disc" aria-hidden="true"><span class="icon">cloud_off</span></span>
+                                        <strong>El documento no cargó</strong>
+                                        <button type="button" class="btn btn-ghost btn-sm" data-visor-reintentar>
+                                            <span class="icon" aria-hidden="true">refresh</span>Volver a intentar
+                                        </button>
+                                    </div>
+                                </div>
+                            </details>
+                        </article>
+                    </section>
+                </div>
+
+                <aside class="consult-side">
+                    <div class="card consult-ask" th:unless="${acceso.vista.fuera.isEmpty()}">
+                        <span class="consult-ask-title">¿Necesita algo que no está aquí?</span>
+                        <span class="summary-note">Pídaselo a la paciente. Ella decide desde su teléfono.</span>
+                        <a class="ask-btn" th:each="c : ${acceso.vista.fuera}"
+                           th:href="@{/pro/consulta/{id}/{cat}(id=${permisoId},cat=${c.slug})}"
+                           th:attr="data-testid='pedir-' + ${c.slug}">
+                            <span th:text="'Pedir ' + ${c.shortLabel}">Pedir vacunas</span>
+                            <span class="icon" aria-hidden="true">add</span>
+                        </a>
+                    </div>
+                    <a class="btn btn-ghost btn-block" th:href="@{/pro/canjear}" data-testid="cerrar-consulta">
+                        <span class="icon" aria-hidden="true">close</span>Cerrar la consulta
+                    </a>
+                </aside>
+            </div>
+        </div>
+
+        <!--/* Lo llena el script si el permiso se corta con la consulta abierta. */-->
+        <div class="redeem" data-consulta-corte hidden>
+            <div class="redeem-card">
+                <div class="alert" role="alert" data-testid="consulta-cortada">
+                    <span class="icon fill" aria-hidden="true">error</span>
+                    <div>
+                        <span class="alert-title" data-corte-titulo></span>
+                        <span class="alert-body" data-corte-texto></span>
+                    </div>
+                </div>
+                <a class="btn btn-pro btn-lg btn-block" th:href="@{/pro/canjear}">Canjear otro código</a>
+            </div>
+        </div>
+    </div>
+
+    <!--/* El permiso ya no sirve al abrir la consulta: no se arma la cartilla. */-->
+    <div class="redeem" th:unless="${acceso.vigente()}">
+        <div class="redeem-card">
+            <div class="alert" role="alert" data-testid="consulta-cortada"
+                 th:attr="data-motivo=${acceso.corte.slug}">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-tag" th:text="${acceso.corte.etiqueta}">Código revocado</span>
+                    <span class="alert-title" th:text="${acceso.corte.titulo}">La paciente revocó este código</span>
+                    <span class="alert-body" th:text="${acceso.corte.texto}">Lo cortó antes de que venciera.</span>
+                </div>
+            </div>
+            <a class="btn btn-pro btn-lg btn-block" th:href="@{/pro/canjear}">Canjear otro código</a>
+        </div>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

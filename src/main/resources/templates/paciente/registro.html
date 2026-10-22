@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Crear cuenta')}"></head>
+<body>
+<!-- UI.md 01b (CR-14, DEC-16): el diseño v4 no trae esta pantalla; se compone con la del login.
+     Textos provisionales (P-07, P-15). -->
+<div class="login">
+    <section class="login-hero">
+        <div class="brand" role="img" aria-label="AXON · Cartilla Médica Digital">
+            <img th:src="@{/img/axon-mark.png}" alt="">
+            <div class="brand-text">
+                <span class="brand-name">AXON</span>
+                <span class="brand-sub">Cartilla Médica Digital</span>
+            </div>
+        </div>
+        <div class="login-pitch">
+            <h1>Tu historia médica, <em>en tus manos.</em></h1>
+            <p>Guarda tus recetas, resultados y vacunas. Muéstraselos a tu médico con un código que tú controlas.</p>
+        </div>
+        <div class="login-points">
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">lock</span></span>Nadie entra a tu cartilla sin tu código</div>
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">timer</span></span>Cada permiso vence solo, o lo cortas tú</div>
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">history</span></span>Ves quién abrió qué, y cuándo</div>
+        </div>
+    </section>
+
+    <section class="login-form-side">
+        <form class="login-form" th:action="@{/registro}" th:object="${form}" method="post">
+            <div>
+                <h2>Crear cuenta</h2>
+                <p class="sub">Con tu cédula y una clave para AXON.</p>
+            </div>
+
+            <div class="alert" th:if="${errores != null}" role="alert" data-testid="alerta-registro">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-title" th:each="error : ${errores}" th:text="${error}"></span>
+                </div>
+            </div>
+
+            <!--/* RS-14: el mensaje es neutro sobre la cédula. Comentario de Thymeleaf: no llega al HTML. */-->
+            <div class="alert" th:if="${noCreada}" role="alert" data-testid="alerta-registro">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-body">No pudimos crear la cuenta con esos datos. Si ya te registraste, entra con tu cédula y tu clave.</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="cedula">Cédula</label>
+                <input class="input" id="cedula" name="cedula" type="text" inputmode="text" autocapitalize="characters" maxlength="20"
+                       autocomplete="username" placeholder="8-912-2043" required
+                       th:value="*{cedula}" data-testid="campo-cedula">
+            </div>
+            <div class="field">
+                <label for="nombre">Nombre</label>
+                <input class="input" id="nombre" name="nombre" type="text" maxlength="120"
+                       autocomplete="name" required th:value="*{nombre}" data-testid="campo-nombre">
+            </div>
+            <!-- La clave nunca se devuelve en la respuesta, ni cuando hay errores. -->
+            <div class="field">
+                <label for="clave">Clave</label>
+                <input class="input password" id="clave" name="clave" type="password" minlength="8" maxlength="72"
+                       autocomplete="new-password" required data-testid="campo-clave">
+            </div>
+            <div class="field">
+                <label for="claveConfirmar">Repite tu clave</label>
+                <input class="input password" id="claveConfirmar" name="claveConfirmar" type="password"
+                       minlength="8" maxlength="72" autocomplete="new-password" required
+                       data-testid="campo-clave-confirmar">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" data-testid="boton-crear-cuenta">
+                Crear mi cuenta<span class="icon" aria-hidden="true">arrow_forward</span>
+            </button>
+
+            <div class="switch-role">
+                <span class="badge"><span class="icon" aria-hidden="true">login</span></span>
+                <div class="txt">
+                    <span>¿Ya tienes cuenta?</span>
+                    <a class="link-btn" th:href="@{/}" data-testid="enlace-entrar">
+                        Entrar<span class="icon" aria-hidden="true">chevron_right</span>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('No encontrada')}"></head>
+<body>
+<!-- P-07: textos provisionales de la pantalla 404. Mismo aviso para "no existe" y "no es tuyo" (H2). -->
+<main class="error-page">
+    <div class="card error-card" data-testid="pantalla-404">
+        <span class="disc neutral"><span class="icon" aria-hidden="true">search_off</span></span>
+        <h1>No encontramos esa página</h1>
+        <p>La dirección no existe o ya no está disponible.</p>
+        <a class="btn btn-ghost" th:href="@{/}">Ir al inicio</a>
+    </div>
+</main>
+</body>
+</html>

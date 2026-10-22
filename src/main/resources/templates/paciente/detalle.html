@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco(${registro.titulo}, 'cartilla', ~{::main})}">
+<body>
+<!--/* Pantallas 03 a 06 (UI.md) con el diseño v4 (DEC-09). Corregir, eliminar y adjuntar se conectan en H7 y H8. */-->
+<main class="app-main">
+    <div class="page">
+        <a class="back-link" th:href="@{/cartilla}" data-testid="registro-volver">
+            <span class="icon" aria-hidden="true">arrow_back</span>Mi cartilla
+        </a>
+
+        <div class="detail" th:attr="data-testid='detalle-' + ${registro.id}">
+            <div class="card viewer">
+                <!--/* Con documento: el script lo pide a /documento/{id} y muestra cargando, el archivo o el error. */-->
+                <th:block th:if="${registro.conDocumento()}">
+                    <div class="viewer-frame" data-visor data-estado="cargando" data-testid="visor-documento"
+                         th:data-src="@{/documento/{id}(id=${registro.documentoId})}"
+                         th:data-tipo="${registro.esPdf()} ? 'pdf' : 'imagen'">
+                        <div class="viewer-state" data-visor-cargando data-testid="visor-cargando" aria-live="polite">
+                            <span class="icon" aria-hidden="true">hourglass_top</span>
+                            <span>Abriendo el documento…</span>
+                        </div>
+                        <div class="viewer-doc" data-visor-documento data-testid="visor-contenido" hidden></div>
+                        <div class="viewer-state" data-visor-error data-testid="visor-error" role="alert" hidden>
+                            <span class="disc" aria-hidden="true"><span class="icon">cloud_off</span></span>
+                            <strong>El documento no cargó</strong>
+                            <p>El registro y sus datos están intactos. Puede ser tu conexión: vuelve a intentar.</p>
+                            <button type="button" class="btn btn-ghost btn-sm" data-visor-reintentar data-testid="documento-reintentar">
+                                <span class="icon" aria-hidden="true">refresh</span>Volver a intentar
+                            </button>
+                        </div>
+                    </div>
+                    <span class="viewer-caption" th:if="${registro.esPdf()}">
+                        <span class="icon" aria-hidden="true">picture_as_pdf</span>PDF
+                    </span>
+                    <span class="viewer-caption" th:unless="${registro.esPdf()}">
+                        <span class="icon" aria-hidden="true">image</span>Imagen
+                    </span>
+                </th:block>
+
+                <div class="viewer-state viewer-empty" th:unless="${registro.conDocumento()}" data-testid="visor-sin-documento">
+                    <span class="disc" aria-hidden="true"><span class="icon">chat_bubble</span></span>
+                    <strong>Sin documento</strong>
+                    <p>Lo escribiste tú, sin adjuntar el papel. El médico lo verá marcado así. Si tienes el documento, adjúntalo.</p>
+                    <button type="button" class="btn btn-primary btn-sm" disabled data-testid="registro-adjuntar">
+                        <span class="icon" aria-hidden="true">photo_camera</span>Fotografiar el papel
+                    </button>
+                </div>
+            </div>
+
+            <div class="detail-body">
+                <div class="detail-head">
+                    <span class="eyebrow" th:text="${registro.categoria.label}">Medicamentos y alergias</span>
+                    <h1 class="detail-title" data-testid="detalle-titulo" th:text="${registro.titulo}">Losartán 50 mg</h1>
+                    <p class="detail-note" th:if="${registro.detalle != null and !#strings.isEmpty(registro.detalle)}"
+                       th:text="${registro.detalle}">1 tableta diaria, en la mañana</p>
+                </div>
+
+                <dl class="card fields">
+                    <div class="field-row">
+                        <dt>Categoría</dt>
+                        <dd data-testid="detalle-categoria" th:text="${registro.categoria.label}">Medicamentos y alergias</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt>Fecha</dt>
+                        <dd data-testid="detalle-fecha" th:text="${registro.fecha}">Enero 2026</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt>Institución</dt>
+                        <dd data-testid="detalle-institucion" th:text="${registro.institucion}">Clínica del Este</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt>Procedencia</dt>
+                        <dd th:attr="data-testid='procedencia-' + ${registro.id},data-procedencia=${registro.conDocumento()} ? 'con-documento' : 'autodeclarado'"
+                            th:text="${registro.procedencia()}">Con documento · PDF</dd>
+                    </div>
+                </dl>
+
+                <span class="note" th:if="${registro.conDocumento()}">
+                    <span class="icon" aria-hidden="true">shield_lock</span>
+                    <span>El documento se abre dentro de este registro y de tu sesión. No tiene un enlace propio que se pueda reenviar.</span>
+                </span>
+
+                <div class="detail-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" disabled data-testid="registro-corregir">
+                        <span class="icon" aria-hidden="true">edit</span>Corregir
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm btn-danger-ghost" disabled data-testid="registro-eliminar">
+                        <span class="icon" aria-hidden="true">delete</span>Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

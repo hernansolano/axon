@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Actividad', 'actividad', ~{::main})}">
+<body>
+<!--/* Pantalla 13 (UI.md) con el diseño v4 (DEC-09). Cada entrada lleva su marca por icono y forma, no solo
+       por color (DEC-35). Solo lectura: ni formularios ni botones (CP-12). */-->
+<main class="app-main">
+    <div class="page">
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Actividad</span>
+                <h1 class="title-serif" data-testid="titulo-pantalla">Quién vio qué, y cuándo</h1>
+                <p class="lede lede-icon" data-testid="actividad-resumen">
+                    <span class="icon" aria-hidden="true">lock</span>
+                    <span>No se puede editar ni borrar · <span data-testid="actividad-conteo"
+                          th:text="${entradas.size() == 1} ? '1 entrada' : ${entradas.size()} + ' entradas'">4 entradas</span></span>
+                </p>
+            </div>
+        </div>
+
+        <div class="card empty-line" th:if="${entradas.isEmpty()}" data-testid="actividad-vacia">
+            Todavía no hay nada en tu actividad.
+        </div>
+
+        <ol class="card activity" th:unless="${entradas.isEmpty()}" data-testid="lista-actividad">
+            <li class="activity-item" th:each="e : ${entradas}"
+                th:attr="data-testid='evento-' + ${e.id},data-marca=${e.marca.slug}">
+                <span class="activity-mark" th:classappend="'mark-' + ${e.marca.slug}" aria-hidden="true">
+                    <span class="icon" th:classappend="${e.marca.name() == 'EMERGENCIA'} ? 'fill'" th:text="${e.marca.icon}">person</span>
+                </span>
+                <div class="activity-body">
+                    <div class="activity-top">
+                        <span class="activity-who" data-testid="evento-quien" th:text="${e.quien}">Tú</span>
+                        <span class="activity-when" data-testid="evento-cuando" th:text="${e.cuando}">ahora mismo</span>
+                    </div>
+                    <span class="activity-what" data-testid="evento-que" th:text="${e.que}">Generaste el código AFT-UN4 para medicamentos y alergias</span>
+                    <span class="activity-kind" data-testid="evento-tipo" th:text="${e.marca.etiqueta}">Acción tuya</span>
+                </div>
+            </li>
+        </ol>
+    </div>
+</main>
+</body>
+</html>

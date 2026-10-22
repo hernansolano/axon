@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<!--
+  DEC-12: el profesional no se registra. El botón solo abre el aviso; no hay ruta de alta.
+  La paciente sí (DEC-16): su login enlaza a /registro y no usa este fragmento.
+  Textos provisionales (P-07). tipo: 'paciente' o 'profesional'.
+  El aviso NO puede ir dentro del <form> del login: HTML no admite formularios anidados y el
+  navegador descarta el <form method="dialog">. Por eso son dos fragmentos.
+-->
+<th:block th:fragment="boton">
+    <button type="button" class="btn btn-ghost btn-block" data-abrir-dialogo="dialogo-registro"
+            data-testid="boton-registrarse">
+        <span class="icon" aria-hidden="true">person_add</span>Registrarme
+    </button>
+</th:block>
+
+<th:block th:fragment="dialogo(tipo)">
+    <dialog id="dialogo-registro" class="dialog" aria-labelledby="dialogo-registro-titulo"
+            data-testid="dialogo-fuera-de-alcance">
+        <span class="disc"><span class="icon" aria-hidden="true">info</span></span>
+        <h2 id="dialogo-registro-titulo">El registro está fuera del alcance</h2>
+        <p>El registro de cuentas no forma parte de este proyecto. Las cuentas de esta versión ya vienen
+            cargadas por el equipo, así que no hay nada que crear.</p>
+        <p th:if="${tipo == 'profesional'}">La verificación de la idoneidad contra un registro oficial
+            tampoco está incluida.</p>
+        <form method="dialog">
+            <button class="btn btn-primary btn-block" data-testid="boton-entendido">Entendido</button>
+        </form>
+    </dialog>
+    <script th:src="@{/js/axon.js}" defer></script>
+</th:block>
+</html>

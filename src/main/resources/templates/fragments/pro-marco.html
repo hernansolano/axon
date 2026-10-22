@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:fragment="marco(titulo, contenido)">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+<div class="pro-app">
+    <header class="pro-top">
+        <img th:src="@{/img/axon-mark.png}" alt="">
+        <span class="name">AXON</span>
+        <span class="pill-pro">Profesional</span>
+        <span class="spacer"></span>
+        <span class="who" data-testid="profesional-sesion"
+              th:text="${usuario.nombre} + ' · ' + ${usuario.identifier}">Dra. Rivera · MED-4471</span>
+        <form th:action="@{/pro/logout}" method="post">
+            <button type="submit" class="exit" data-testid="boton-salir">
+                <span class="icon" aria-hidden="true">logout</span>Salir
+            </button>
+        </form>
+    </header>
+    <th:block th:replace="${contenido}"></th:block>
+</div>
+</body>
+</html>

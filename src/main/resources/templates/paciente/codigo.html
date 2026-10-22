@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Dicta este código', 'compartir', ~{::main})}">
+<body>
+<!--/* Pantalla 10 (UI.md) con el diseño v4 (DEC-09). El contador corre en el navegador desde los
+       segundos que dice el servidor; al llegar a cero recarga y el servidor dice el estado (DEC-29). */-->
+<main class="app-main">
+    <div class="page page-narrow">
+        <div class="code-head">
+            <span class="eyebrow" th:text="${permiso.proposito}" data-testid="proposito">Consulta general</span>
+            <h1 class="title-serif">Dicta este código</h1>
+            <p class="lede">El médico lo teclea en su cuenta profesional.</p>
+        </div>
+
+        <div class="card code-card">
+            <p class="code-chars" data-testid="codigo-generado" th:attr="data-codigo=${permiso.codigo}">
+                <span class="sr-only" th:text="${permiso.codigo}">AFT-UN4</span>
+                <th:block th:each="c : ${permiso.caracteres()}">
+                    <span class="code-dash" th:if="${c == '-'}" aria-hidden="true"></span>
+                    <span class="code-char" th:unless="${c == '-'}" th:text="${c}" aria-hidden="true">A</span>
+                </th:block>
+            </p>
+            <span class="code-spelled" th:text="${permiso.deletreado()}">AFT · UN4</span>
+
+            <div class="code-state" th:classappend="'code-state-' + ${permiso.estadoSlug()}"
+                 th:attr="data-testid='estado-permiso-' + ${permiso.estadoSlug()}"
+                 th:data-contador="${permiso.activo()} ? 'si' : null"
+                 th:data-restante="${permiso.restanteSeg}" th:data-total="${permiso.totalSeg}">
+                <div class="code-state-row">
+                    <span class="state-mark" aria-hidden="true"></span>
+                    <span class="code-state-label" th:text="${permiso.estadoTexto()}">Permiso activo</span>
+                    <span class="code-remaining" th:if="${permiso.activo()}" data-restante-texto
+                          th:text="${permiso.restante()}">1 h 59 min</span>
+                </div>
+                <div class="bar" th:if="${permiso.activo()}">
+                    <div class="bar-fill" data-barra th:style="'width:' + ${permiso.porcentaje()}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card code-scope">
+            <span class="summary-label">Podrá ver</span>
+            <span class="code-scope-cats" th:text="${permiso.alcanceTexto}" data-testid="podra-ver">Medicamentos y alergias</span>
+            <span class="summary-note" th:text="${permiso.quedaFuera}" data-testid="queda-fuera">Queda fuera: vacunas.</span>
+        </div>
+
+        <div class="code-actions">
+            <a class="btn btn-ghost btn-lg" th:href="@{/permisos}" data-testid="ver-permisos">Ver mis permisos</a>
+            <form th:if="${permiso.activo()}" th:action="@{/permisos/{id}/revocar(id=${permiso.id})}" method="post">
+                <button type="submit" class="btn btn-danger-ghost btn-lg btn-block" data-testid="boton-revocar">Revocar este permiso</button>
+            </form>
+        </div>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

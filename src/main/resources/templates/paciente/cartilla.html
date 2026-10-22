@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Mi cartilla', 'cartilla', ~{::main})}">
+<body>
+<main class="app-main">
+    <div class="page">
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Mi cartilla</span>
+                <h1 class="greeting" data-testid="saludo" th:text="'Hola, ' + ${usuario.primerNombre}">Hola, Ana</h1>
+                <span class="lede" th:unless="${cartilla.vacia()}" data-testid="total-registros"
+                      th:text="${cartilla.totalTexto} + ' guardados, ordenados por tipo.'">7 registros guardados, ordenados por tipo.</span>
+            </div>
+            <a class="btn btn-primary" th:href="@{/cartilla/nuevo}" data-testid="agregar-registro">
+                <span class="icon" aria-hidden="true">add</span>Agregar un registro
+            </a>
+        </div>
+
+        <div class="card empty" th:if="${cartilla.vacia()}" data-testid="cartilla-vacia">
+            <div class="empty-art" aria-hidden="true">
+                <div class="empty-sheet"><span></span><span style="width:90%"></span><span style="width:75%"></span><span style="width:82%"></span></div>
+            </div>
+            <div class="empty-copy">
+                <h2>Empieza por el papel que ya cargas en la cartera.</h2>
+                <p>La receta del mes pasado, el resultado del laboratorio, el carné de vacunas. Una foto y queda guardado.</p>
+            </div>
+        </div>
+
+        <div class="groups" th:unless="${cartilla.vacia()}">
+            <section class="card group" th:each="grupo : ${cartilla.grupos}"
+                     th:attr="data-testid='grupo-' + ${grupo.categoria.slug}">
+                <div class="group-head">
+                    <span class="tone" th:classappend="'tone-' + ${grupo.categoria.slug}">
+                        <span class="icon" aria-hidden="true" th:text="${grupo.categoria.icon}">stethoscope</span>
+                    </span>
+                    <h2 class="group-name" th:text="${grupo.categoria.label}">Diagnósticos y antecedentes</h2>
+                    <span class="group-count" th:text="${grupo.conteo}">2 registros</span>
+                </div>
+                <a class="record" th:each="r : ${grupo.registros}" th:href="@{/cartilla/{id}(id=${r.id})}"
+                   th:attr="data-testid='registro-' + ${r.id}">
+                    <div class="record-body">
+                        <span class="record-title" th:text="${r.titulo}">Título</span>
+                        <span class="record-meta" data-testid="registro-fecha" th:text="${r.meta}">agosto 2026 · Clínica</span>
+                        <span class="chip chip-doc" th:if="${r.conDocumento}"
+                              th:attr="data-testid='procedencia-' + ${r.id}" data-procedencia="con-documento">
+                            <span class="icon fill" aria-hidden="true">description</span>Con documento · <span th:text="${r.tipoDocumento}">PDF</span>
+                        </span>
+                        <span class="chip chip-dicho" th:unless="${r.conDocumento}"
+                              th:attr="data-testid='procedencia-' + ${r.id}" data-procedencia="autodeclarado">
+                            <span class="icon" aria-hidden="true">chat_bubble</span>Lo dijo la paciente
+                        </span>
+                    </div>
+                    <span class="icon record-go" aria-hidden="true">chevron_right</span>
+                </a>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>

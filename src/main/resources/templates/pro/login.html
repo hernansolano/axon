@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Acceso profesional')}"></head>
+<body>
+<div class="login pro">
+    <section class="login-hero">
+        <div class="brand" style="gap:10px">
+            <img th:src="@{/img/axon-mark.png}" alt="" style="width:40px;height:40px">
+            <span class="brand-name" style="font-size:20px;color:oklch(0.98 0.005 210)">AXON</span>
+            <span class="pill-pro">Profesional</span>
+        </div>
+        <div class="login-pitch">
+            <h1>Entra y canjea el código <em>del paciente.</em></h1>
+            <p>Tener cuenta no te da acceso a ninguna cartilla. El acceso lo abre el paciente, un código a la vez.</p>
+        </div>
+        <span class="foot">Cada consulta queda registrada con tu nombre e idoneidad.</span>
+    </section>
+
+    <section class="login-form-side">
+        <form class="login-form pro-form" th:action="@{/pro/login}" method="post">
+            <h2>Acceso profesional</h2>
+
+            <!-- P-07: texto provisional del prototipo; no dice cuál de los dos datos falló. -->
+            <div class="alert" th:if="${param.error}" role="alert" data-testid="alerta-credenciales">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-title">La idoneidad o la clave no coinciden. Revisa los dos datos.</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="idoneidad">Idoneidad</label>
+                <input class="input mono" id="idoneidad" name="idoneidad" type="text" maxlength="20"
+                       autocomplete="username" required data-testid="campo-idoneidad">
+            </div>
+            <div class="field">
+                <label for="clave">Clave</label>
+                <input class="input password" id="clave" name="clave" type="password" maxlength="72"
+                       autocomplete="current-password" required data-testid="campo-clave">
+            </div>
+            <button type="submit" class="btn btn-pro btn-lg btn-block" data-testid="boton-entrar">Entrar</button>
+            <th:block th:replace="~{fragments/registro :: boton}"></th:block>
+            <a class="btn btn-ghost" style="align-self:center;border:0;min-height:44px;font-size:14px;color:oklch(0.45 0.03 215)"
+               th:href="@{/}" data-testid="enlace-paciente">Soy paciente, no médico</a>
+        </form>
+        <th:block th:replace="~{fragments/registro :: dialogo('profesional')}"></th:block>
+    </section>
+</div>
+</body>
+</html>

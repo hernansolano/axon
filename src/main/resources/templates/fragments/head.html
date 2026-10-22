@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Único lugar donde se cargan las fuentes y los iconos (DEC-10). Están alojados en la app
+  (/css/fuentes.css y /fonts/): ninguna página pide nada a un tercero.
+-->
+<head th:fragment="head(titulo)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${titulo} + ' · AXON'">AXON</title>
+    <link rel="icon" type="image/png" th:href="@{/img/axon-mark.png}">
+    <link rel="stylesheet" th:href="@{/css/fuentes.css}">
+    <link rel="stylesheet" th:href="@{/css/axon.css}">
+</head>
+</html>

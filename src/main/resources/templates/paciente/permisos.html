@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Permisos', 'permisos', ~{::main})}">
+<body>
+<!--/* Pantalla 11 (UI.md) con el diseño v4 (DEC-09). Los tres estados se distinguen por marca y trazo,
+       no solo por color (HU-09): punto lleno, reloj con borde punteado y aspa. El estado lo calcula el
+       servidor con la hora (DEC-28); solo los activos se pueden revocar. */-->
+<main class="app-main">
+    <div class="page">
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Permisos</span>
+                <h1 class="title-serif">Quién puede ver tu cartilla</h1>
+                <p class="lede">Cada código que generaste y su estado ahora mismo.</p>
+            </div>
+        </div>
+
+        <div class="notice" th:if="${aviso}" role="status" data-testid="aviso-revocado">
+            <span class="icon fill" aria-hidden="true">check_circle</span>
+            <span th:text="${aviso}">El código AFT-UN4 ya no sirve.</span>
+        </div>
+
+        <div class="card empty-line" th:if="${permisos.isEmpty()}" data-testid="permisos-vacio">
+            Todavía no has compartido tu cartilla.
+        </div>
+
+        <div class="permits" th:unless="${permisos.isEmpty()}">
+            <article class="card permit" th:each="p : ${permisos}" th:classappend="'permit-' + ${p.estadoSlug()}"
+                     th:attr="data-testid='permiso-' + ${p.id},data-estado=${p.estadoSlug()}">
+                <div class="permit-top">
+                    <span class="state state-activo" th:if="${p.activo()}" data-testid="estado-permiso-activo"
+                          data-contador th:data-restante="${p.restanteSeg}" th:data-total="${p.totalSeg}">
+                        <span class="state-mark" aria-hidden="true"></span>Activo · <span data-restante-texto th:text="${p.restante()}">1 h 59 min</span>
+                    </span>
+                    <span class="state state-vencido" th:if="${p.vencido()}" data-testid="estado-permiso-vencido">
+                        <span class="icon" aria-hidden="true">schedule</span>Vencido
+                    </span>
+                    <span class="state state-revocado" th:if="${p.revocado()}" data-testid="estado-permiso-revocado">
+                        <span class="icon" aria-hidden="true">block</span>Revocado por ti
+                    </span>
+                    <span class="permit-code" th:text="${p.codigo}" data-testid="codigo-permiso">AFT-UN4</span>
+                </div>
+                <span class="permit-who" th:text="${p.quien}" data-testid="quien-canjeo">Sin canjear</span>
+                <span class="permit-scope" th:text="${p.alcanceFrase()}" data-testid="alcance-permiso">Alcance: medicamentos y alergias.</span>
+                <div class="bar bar-thin" th:if="${p.activo()}">
+                    <div class="bar-fill" data-barra th:style="'width:' + ${p.porcentaje()}"></div>
+                </div>
+                <span class="permit-meta" th:text="${p.meta()}">Consulta general · generado ahora mismo</span>
+                <form th:if="${p.activo()}" th:action="@{/permisos/{id}/revocar(id=${p.id})}" method="post">
+                    <button type="submit" class="btn btn-sm btn-danger-ghost" th:attr="data-testid='revocar-' + ${p.id}">Revocar ahora</button>
+                </form>
+            </article>
+        </div>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

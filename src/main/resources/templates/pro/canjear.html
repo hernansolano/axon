@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/pro-marco :: marco('Canjear un código', ~{::main})}">
+<body>
+<!--/* Pantallas 15 y 16 (UI.md) con el diseño v4 (DEC-09, DEC-34). Un campo y nada más: sin buscador, sin
+       historial, sin sugerencias (RS-14). Cada código que no sirve tiene su mensaje; nunca uno genérico. */-->
+<main class="pro-main">
+    <div class="redeem">
+        <form class="redeem-card" th:action="@{/pro/canjear}" method="post" novalidate>
+            <span class="key"><span class="icon" aria-hidden="true">key</span></span>
+            <div class="redeem-head">
+                <h1>Teclea el código del paciente</h1>
+                <p>Seis caracteres, sin distinguir mayúsculas. Solo verás lo que ese código autorice, mientras esté vigente.</p>
+            </div>
+            <input class="code-input" type="text" name="codigo" th:value="${codigo}" placeholder="___-___" maxlength="7"
+                   autocomplete="off" autocapitalize="characters" spellcheck="false" data-testid="campo-codigo"
+                   aria-label="Código del paciente" autofocus>
+            <button type="submit" class="btn btn-pro btn-lg btn-block" data-testid="boton-canjear">
+                Canjear<span class="icon" aria-hidden="true">arrow_forward</span>
+            </button>
+            <div class="alert" th:if="${error}" role="alert" th:attr="data-testid='alerta-codigo-' + ${error.slug}">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-tag" th:text="${error.etiqueta}">Código inválido</span>
+                    <span class="alert-title" th:text="${error.titulo}">Ese código no existe</span>
+                    <span class="alert-body" th:text="${error.texto}">Revise los seis caracteres con la paciente.</span>
+                </div>
+            </div>
+        </form>
+        <span class="note">
+            <span class="icon" aria-hidden="true">info</span>
+            Aquí no hay buscador de pacientes, ni historial, ni sugerencias. Esta pantalla está vacía a propósito.
+        </span>
+    </div>
+</main>
+</body>
+</html>

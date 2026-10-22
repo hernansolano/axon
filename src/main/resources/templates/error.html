@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Algo falló')}"></head>
+<body>
+<main class="error-page">
+    <div class="card error-card" data-testid="pantalla-error">
+        <span class="disc neutral"><span class="icon" aria-hidden="true">error</span></span>
+        <h1>Algo falló de nuestro lado</h1>
+        <p>No se pudo completar lo que pediste. Vuelve al inicio e inténtalo de nuevo.</p>
+        <a class="btn btn-ghost" th:href="@{/}">Ir al inicio</a>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: axon
+  profiles:
+    default: dev
+  # Las credenciales de la base viven en .env (ignorado por git). Ver .env.example.
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${AXON_DB_URL:jdbc:postgresql://localhost:5432/axon}
+    username: ${AXON_DB_USER:axon}
+    password: ${AXON_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  # Una foto de teléfono pasa del 1 MB que Spring trae por defecto. El tope del documento son 10 MB
+  # (DocumentUpload.MAX_BYTES); el margen deja que el formulario lo diga por su nombre en vez de cortar.
+  servlet:
+    multipart:
+      max-file-size: 12MB
+      max-request-size: 13MB
+
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+
+axon:
+  version: '@project.version@'
+  # Carpeta de los documentos, fuera de /static: solo salen por /documento/{id} (RS-13).
+  almacen:
+    dir: ${AXON_ALMACEN_DIR:almacen}

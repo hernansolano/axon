@@ -28,3 +28,4 @@ Thumbs.db
 
 # Claude Code: los ajustes personales no se comparten
 .claude/settings.local.json
+CLAUDE.local.md

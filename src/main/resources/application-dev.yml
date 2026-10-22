@@ -1,0 +1,9 @@
+# Perfil dev: base local y datos sintéticos de docs/ESPEC.md §8.
+spring:
+  thymeleaf:
+    cache: false
+
+axon:
+  seed:
+    enabled: true
+    clave: axon1234

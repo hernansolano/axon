@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Entrar')}"></head>
+<body>
+<div class="login">
+    <section class="login-hero">
+        <div class="brand" role="img" aria-label="AXON · Cartilla Médica Digital">
+            <img th:src="@{/img/axon-mark.png}" alt="">
+            <div class="brand-text">
+                <span class="brand-name">AXON</span>
+                <span class="brand-sub">Cartilla Médica Digital</span>
+            </div>
+        </div>
+        <div class="login-pitch">
+            <h1>Tu historia médica, <em>en tus manos.</em></h1>
+            <p>Guarda tus recetas, resultados y vacunas. Muéstraselos a tu médico con un código que tú controlas.</p>
+        </div>
+        <div class="login-points">
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">lock</span></span>Nadie entra a tu cartilla sin tu código</div>
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">timer</span></span>Cada permiso vence solo, o lo cortas tú</div>
+            <div class="login-point"><span class="disc"><span class="icon" aria-hidden="true">history</span></span>Ves quién abrió qué, y cuándo</div>
+        </div>
+    </section>
+
+    <section class="login-form-side">
+        <form class="login-form" th:action="@{/login}" method="post">
+            <div>
+                <h2>Entrar</h2>
+                <p class="sub">Con tu cédula y tu clave de AXON.</p>
+            </div>
+
+            <div class="alert alert-ok" th:if="${param.registrada}" role="status" data-testid="aviso-cuenta-creada">
+                <span class="icon fill" aria-hidden="true">check_circle</span>
+                <div>
+                    <span class="alert-title">Tu cuenta está lista. Entra con tu cédula y tu clave.</span>
+                </div>
+            </div>
+
+            <!-- P-07: texto provisional del prototipo; no dice cuál de los dos datos falló. -->
+            <div class="alert" th:if="${param.error}" role="alert" data-testid="alerta-credenciales">
+                <span class="icon fill" aria-hidden="true">error</span>
+                <div>
+                    <span class="alert-title">La cédula o la clave no coinciden. Revisa los dos datos.</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="cedula">Cédula</label>
+                <input class="input" id="cedula" name="cedula" type="text" inputmode="text" autocapitalize="characters" maxlength="20"
+                       autocomplete="username" required data-testid="campo-cedula">
+            </div>
+            <div class="field">
+                <label for="clave">Clave</label>
+                <input class="input password" id="clave" name="clave" type="password" maxlength="72"
+                       autocomplete="current-password" required data-testid="campo-clave">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" data-testid="boton-entrar">
+                Entrar<span class="icon" aria-hidden="true">arrow_forward</span>
+            </button>
+
+            <!-- DEC-16: la paciente sí se registra; el aviso de fuera de alcance queda solo para el profesional. -->
+            <a class="btn btn-ghost btn-block" th:href="@{/registro}" data-testid="boton-registrarse">
+                <span class="icon" aria-hidden="true">person_add</span>Registrarme
+            </a>
+
+            <div class="switch-role">
+                <span class="badge"><span class="icon" aria-hidden="true">stethoscope</span></span>
+                <div class="txt">
+                    <span>¿Eres profesional de salud?</span>
+                    <a class="link-btn" th:href="@{/pro}" data-testid="enlace-profesional">
+                        Entrar como profesional<span class="icon" aria-hidden="true">chevron_right</span>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+</body>
+</html>

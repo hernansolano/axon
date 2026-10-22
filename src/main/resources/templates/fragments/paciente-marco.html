@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:fragment="marco(titulo, activo, contenido)">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+<div class="app">
+    <header class="app-top">
+        <a class="brand" th:href="@{/cartilla}" aria-label="AXON · Cartilla Médica Digital">
+            <img th:src="@{/img/axon-mark.png}" alt="">
+            <span class="brand-text">
+                <span class="brand-name">AXON</span>
+                <span class="brand-sub">Cartilla Médica Digital</span>
+            </span>
+        </a>
+        <div class="app-user" data-testid="usuario-sesion">
+            <div class="who">
+                <span class="avatar" aria-hidden="true" th:text="${usuario.iniciales}">AC</span>
+                <span class="app-user-info">
+                    <span class="app-user-name" th:text="${usuario.nombre}">Ana Cedeño</span>
+                    <span class="app-user-id" th:text="'Cédula ' + ${usuario.identifier}">Cédula 8-912-2043</span>
+                </span>
+            </div>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="exit-btn" data-testid="boton-salir">
+                    <span class="icon" aria-hidden="true">logout</span>Salir
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <nav class="app-nav" aria-label="Principal">
+        <a class="nav-link" data-nav="cartilla" data-testid="nav-cartilla" th:href="@{/cartilla}"
+           th:aria-current="${activo == 'cartilla'} ? 'page'">
+            <span class="icon" aria-hidden="true">folder_open</span><span>Cartilla</span><span class="dot"></span>
+        </a>
+        <a class="nav-link" data-nav="permisos" data-testid="nav-permisos" th:href="@{/permisos}"
+           th:aria-current="${activo == 'permisos'} ? 'page'">
+            <span class="icon" aria-hidden="true">key</span><span>Permisos</span><span class="dot"></span>
+        </a>
+        <a class="nav-link share" data-nav="compartir" data-testid="nav-compartir" th:href="@{/compartir}"
+           th:aria-current="${activo == 'compartir'} ? 'page'" aria-label="Compartir mi cartilla">
+            <span class="disc"><span class="icon" aria-hidden="true">qr_code_2</span></span>
+            <span class="lbl-short">Compartir</span><span class="lbl-long">Compartir mi cartilla</span>
+        </a>
+        <a class="nav-link" data-nav="emergencia" data-testid="nav-emergencia" th:href="@{/emergencia}"
+           th:aria-current="${activo == 'emergencia'} ? 'page'">
+            <span class="icon" aria-hidden="true">emergency</span><span>Emergencia</span><span class="dot"></span>
+        </a>
+        <a class="nav-link" data-nav="actividad" data-testid="nav-actividad" th:href="@{/actividad}"
+           th:aria-current="${activo == 'actividad'} ? 'page'">
+            <span class="icon" aria-hidden="true">history</span><span>Actividad</span><span class="dot"></span>
+        </a>
+    </nav>
+
+    <th:block th:replace="${contenido}"></th:block>
+</div>
+</body>
+</html>

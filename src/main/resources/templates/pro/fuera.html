@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/pro-marco :: marco('Fuera del permiso', ~{::main})}">
+<body>
+<!--/* Pantalla 18 (UI.md) con el diseño v4 (DEC-09). La denegación ya quedó anotada en la bitácora de la
+       paciente (HU-08, criterio 7). El botón de pedir que la agregue es PB-19 (DEC-33). */-->
+<main class="pro-main">
+    <div class="redeem">
+        <div class="redeem-card" data-testid="alerta-fuera-de-alcance">
+            <span class="key deny"><span class="icon" aria-hidden="true">lock</span></span>
+            <div class="redeem-head">
+                <span class="alert-tag">Fuera del alcance autorizado</span>
+                <h1 th:text="${pedido.categoria.label} + ' no está en este permiso'">Vacunas no está en este permiso</h1>
+                <p>La paciente no incluyó esta categoría en el código que le dio. No es una falla del sistema: es el sistema haciendo su trabajo.</p>
+            </div>
+            <div class="deny-box">
+                <span class="summary-label">Lo que sí autorizó</span>
+                <span class="consult-scope" th:text="${pedido.autorizado}" data-testid="alcance-autorizado">Laboratorios y estudios</span>
+                <span class="deny-ask">Pídale que agregue <strong th:text="${pedido.categoria.shortLabel}">vacunas</strong> desde su teléfono: entra a Compartir, marca la categoría y el permiso se amplía con el mismo código.</span>
+            </div>
+            <div class="alert alert-ok" th:if="${solicitado}" role="status" data-testid="solicitud-enviada">
+                <span class="icon fill" aria-hidden="true">check_circle</span>
+                <div><span class="alert-body">Le avisamos a la paciente que usted pidió <strong th:text="${pedido.categoria.shortLabel}">vacunas</strong>. Lo verá en su actividad.</span></div>
+            </div>
+            <form th:unless="${solicitado}" th:action="@{/pro/consulta/{id}/solicitar/{cat}(id=${permisoId},cat=${pedido.categoria.slug})}" method="post">
+                <button type="submit" class="btn btn-ghost btn-lg btn-block" data-testid="boton-solicitar-ampliacion">
+                    <span class="icon" aria-hidden="true">add</span><span th:text="'Pedir que agregue ' + ${pedido.categoria.shortLabel}">Pedir que agregue vacunas</span>
+                </button>
+            </form>
+            <span class="note"><span class="icon" aria-hidden="true">history</span>Este intento quedó anotado en la actividad de la paciente.</span>
+            <a class="btn btn-pro btn-lg btn-block" th:href="@{/pro/consulta/{id}(id=${permisoId})}" data-testid="volver-a-lo-autorizado">
+                <span class="icon" aria-hidden="true">arrow_back</span>Volver a lo autorizado
+            </a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

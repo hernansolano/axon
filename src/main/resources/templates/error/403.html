@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Sin acceso')}"></head>
+<body>
+<!-- P-07: textos provisionales de la pantalla 403. -->
+<main class="error-page">
+    <div class="card error-card" data-testid="pantalla-403">
+        <span class="disc"><span class="icon" aria-hidden="true">lock</span></span>
+        <h1>No tienes acceso a esta página</h1>
+        <p>Tu cuenta no está autorizada para ver esto. Si crees que es un error, vuelve al inicio.</p>
+        <a class="btn btn-ghost" th:href="@{/}">Ir al inicio</a>
+    </div>
+</main>
+</body>
+</html>

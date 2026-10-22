@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Compartir', 'compartir', ~{::main})}">
+<body>
+<!--/* Pantalla 09 (UI.md) con el diseño v4 (DEC-09, DEC-29). Funciona sin JavaScript: el script solo
+       actualiza el resumen mientras se marca. Lo que se envía lo vuelve a revisar el servidor. */-->
+<main class="app-main">
+    <div class="page">
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Compartir</span>
+                <h1 class="title-serif">¿Qué le vas a mostrar?</h1>
+                <p class="lede">Marca solo lo que haga falta para esta consulta.</p>
+            </div>
+        </div>
+
+        <form class="share-form" th:action="@{/compartir}" method="post" novalidate data-compartir>
+            <div class="share-main">
+                <div class="alert" th:unless="${problemas.isEmpty()}" role="alert" data-testid="alerta-compartir">
+                    <span class="icon fill" aria-hidden="true">error</span>
+                    <div>
+                        <span class="alert-body" th:each="problema : ${problemas}" th:text="${problema}"
+                              data-testid="problema-compartir"></span>
+                    </div>
+                </div>
+
+                <fieldset class="card share-cats">
+                    <legend class="sr-only">Qué categorías va a ver</legend>
+                    <label class="share-cat" th:each="o : ${opciones}" th:attr="data-testid='categoria-' + ${o.categoria.slug}">
+                        <input class="sr-only" type="checkbox" name="alcance" th:value="${o.categoria}"
+                               th:checked="${marcadas.contains(o.categoria)}" th:attr="data-corto=${o.categoria.shortLabel}">
+                        <span class="tone share-tone" th:classappend="'tone-' + ${o.categoria.slug}">
+                            <span class="icon" aria-hidden="true" th:text="${o.categoria.icon}">medication</span>
+                        </span>
+                        <span class="share-cat-text">
+                            <span class="share-cat-name" th:text="${o.categoria.label}">Medicamentos y alergias</span>
+                            <span class="share-cat-count" th:text="${o.conteo}">2 registros</span>
+                        </span>
+                        <span class="share-check"><span class="icon" aria-hidden="true">check</span></span>
+                    </label>
+                </fieldset>
+
+                <fieldset class="share-field">
+                    <legend>Por cuánto tiempo</legend>
+                    <div class="segmented">
+                        <label th:each="d : ${vigencias}" th:attr="data-testid='vigencia-' + ${d.minutes}">
+                            <input class="sr-only" type="radio" name="vigencia" th:value="${d.minutes}"
+                                   th:checked="${d == vigencia}" th:attr="data-largo=${d.longLabel}">
+                            <span th:text="${d.label}">2 horas</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="share-field">
+                    <label for="proposito">Para qué</label>
+                    <select class="input" id="proposito" name="proposito" data-testid="campo-proposito">
+                        <option th:each="p : ${propositos}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == proposito}">Consulta general</option>
+                    </select>
+                </div>
+            </div>
+
+            <aside class="card share-summary">
+                <span class="summary-eyebrow">Resumen del permiso</span>
+                <div class="summary-block">
+                    <span class="summary-label">Queda fuera</span>
+                    <span class="summary-strong" data-queda-fuera data-testid="queda-fuera"
+                          th:text="${resumen.quedaFuera}">Diagnósticos y antecedentes</span>
+                    <span class="summary-note" data-queda-fuera-nota th:text="${resumen.nota}">El médico no lo ve ni sabe que existe.</span>
+                </div>
+                <div class="summary-rule"></div>
+                <div class="summary-line">
+                    <span class="icon" aria-hidden="true">timer</span>
+                    <span>Vence solo en <span data-vigencia-texto th:text="${vigencia.longLabel}">2 horas</span></span>
+                </div>
+                <div class="summary-line">
+                    <span class="icon" aria-hidden="true">block</span>Puedes revocarlo cuando quieras
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-block" data-generar data-testid="boton-generar-codigo">
+                    <span class="icon" aria-hidden="true">key</span><span data-generar-texto>Generar el código</span>
+                </button>
+            </aside>
+        </form>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>
