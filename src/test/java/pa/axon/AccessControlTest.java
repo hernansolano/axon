@@ -12,6 +12,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +30,7 @@ import pa.axon.config.SecurityConfig;
 import pa.axon.domain.ActivityService;
 import pa.axon.domain.CartillaService;
 import pa.axon.domain.CartillaService.CartillaVista;
+import pa.axon.domain.CartillaService.FichaConfig;
 import pa.axon.domain.CartillaService.GrupoVista;
 import pa.axon.domain.CartillaService.RegistroVista;
 import pa.axon.domain.Category;
@@ -95,6 +97,7 @@ class AccessControlTest {
 
         var dicho = new RegistroVista(1L, "Dolor lumbar recurrente", "", "mayo 2026 · Sin institución anotada", false, null);
         var conDoc = new RegistroVista(2L, "Losartán 50 mg", "", "enero 2026 · Clínica del Este", true, "PDF");
+        when(cartilla.ficha(1L)).thenReturn(new FichaConfig(List.of(), ""));
         when(cartilla.deLaPaciente(1L)).thenReturn(new CartillaVista(2, "2 registros", List.of(
                 new GrupoVista(Category.DIAGNOSTICOS, "1 registro", List.of(dicho)),
                 new GrupoVista(Category.MEDICAMENTOS, "1 registro", List.of(conDoc)))));
@@ -234,6 +237,18 @@ class AccessControlTest {
         mvc.perform(get("/cartilla").with(user(ana)))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model()
                         .attribute("usuario", org.hamcrest.Matchers.not(org.hamcrest.Matchers.instanceOf(AxonUser.class))));
+    }
+
+    @Test
+    void lasDosCadenasMandanLasCabecerasQuePidioZap() throws Exception {
+        // PB-16 (DEC-43): CSP sin scripts de terceros ni en línea, Permissions-Policy y aislamiento de origen.
+        for (String ruta : List.of("/", "/pro", "/registro")) {
+            mvc.perform(get(ruta))
+                    .andExpect(header().string("Content-Security-Policy", SecurityConfig.CSP))
+                    .andExpect(header().string("Permissions-Policy", SecurityConfig.PERMISSIONS))
+                    .andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"))
+                    .andExpect(header().string("Cross-Origin-Resource-Policy", "same-origin"));
+        }
     }
 
     @Test

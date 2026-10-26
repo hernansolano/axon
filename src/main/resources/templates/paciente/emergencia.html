@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Ficha de emergencia', 'emergencia', ~{::main})}">
+<body>
+<!--/* Pantalla 12 (UI.md) con el diseño v4 (DEC-09). Cada línea es un registro de la paciente: su
+       categoría en monoespaciada y el título en serif (DEC-42). Funciona sin JavaScript; el script solo
+       actualiza el resumen mientras se marca. Lo que se guarda lo vuelve a revisar el servidor. */-->
+<main class="app-main">
+    <div class="page">
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Emergencia</span>
+                <h1 class="title-serif">Ficha de emergencia</h1>
+                <p class="lede">Si llegas a una urgencia y no puedes hablar, esto es <strong>lo único</strong> que un médico
+                    podrá ver, sin código de por medio. Lo eliges tú, línea por línea.</p>
+            </div>
+        </div>
+
+        <div class="notice" th:if="${guardada}" role="status" data-testid="aviso-ficha-guardada">
+            <span class="icon fill" aria-hidden="true">check_circle</span>
+            <span>Guardamos tu ficha.</span>
+        </div>
+
+        <form class="share-form" th:action="@{/emergencia}" method="post" data-ficha>
+            <div class="share-main">
+                <p class="empty-line" th:if="${ficha.lineas().isEmpty()}" data-testid="ficha-sin-registros">
+                    Todavía no tienes registros. Agrega uno a tu cartilla y luego elige si va en la ficha.
+                </p>
+                <fieldset class="card ficha-lineas" th:unless="${ficha.lineas().isEmpty()}">
+                    <legend class="sr-only">Qué verá urgencias</legend>
+                    <label class="ficha-linea" th:each="l : ${ficha.lineas()}"
+                           th:attr="data-testid='ficha-registro-' + ${l.registroId()}">
+                        <input class="sr-only" type="checkbox" name="registro" th:value="${l.registroId()}"
+                               th:checked="${l.marcada()}" th:attr="data-dato=${l.dato()}">
+                        <span class="share-check"><span class="icon" aria-hidden="true">check</span></span>
+                        <span class="ficha-texto">
+                            <span class="ficha-etiqueta" th:text="${l.etiqueta()}">medicamentos y alergias</span>
+                            <span class="ficha-dato" th:text="${l.dato()}">Losartán 50 mg</span>
+                        </span>
+                    </label>
+                </fieldset>
+            </div>
+
+            <aside class="card share-summary ficha-resumen" data-testid="ficha-resumen">
+                <p class="ficha-resumen-texto" data-resumen-con th:hidden="${ficha.vacia()}">
+                    En urgencias se verán <strong data-resumen-lista th:text="${ficha.marcadas()}">Losartán 50 mg</strong>
+                    y nada más: ni tus documentos, ni tu bitácora, ni el resto de la cartilla.
+                </p>
+                <p class="ficha-resumen-texto" data-resumen-vacio th:hidden="${!ficha.vacia()}" data-testid="ficha-vacia">
+                    Tu ficha está vacía: en urgencias no se verá ningún dato tuyo.
+                </p>
+                <span class="ficha-resumen-nota">cada apertura queda registrada en Actividad y te llega una notificación</span>
+                <button type="submit" class="btn btn-primary btn-lg btn-block" data-testid="boton-guardar-ficha">
+                    Guardar la ficha
+                </button>
+            </aside>
+        </form>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

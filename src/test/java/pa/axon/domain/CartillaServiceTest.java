@@ -14,7 +14,10 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,13 +29,16 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import pa.axon.domain.CartillaService.Correccion;
 import pa.axon.domain.CartillaService.NuevoRegistro;
 
 /**
  * H2: el detalle y los documentos solo salen para su dueña (CP-02, CP-15), la procedencia se deriva
  * del documento y un archivo borrado del disco no se lleva el registro. H7: un registro nuevo queda
  * con documento o autodeclarado, y su archivo se guarda por UUID (HU-03). Repositorios simulados y un
- * almacén real en una carpeta temporal.
+ * almacén real en una carpeta temporal. H8: corregir y eliminar solo lo propio, y eliminar anota en la
+ * bitácora sin tocar lo anterior (HU-05, CP-07). H9: la ficha de emergencia solo lleva registros propios y
+ * vacía no expone nada (HU-06, CP-13).
  */
 class CartillaServiceTest {
 
@@ -44,6 +50,10 @@ class CartillaServiceTest {
 
     RecordRepository records = mock(RecordRepository.class);
     DocumentRepository documents = mock(DocumentRepository.class);
+    AuditRepository audit = mock(AuditRepository.class);
+    EmergencyItemRepository emergencia = mock(EmergencyItemRepository.class);
+    /** 26 de octubre de 2026 al mediodía en Panamá. */
+    Clock reloj = Clock.fixed(Instant.parse("2026-10-26T17:00:00Z"), ZoneId.of("America/Panama"));
     DocumentStorage storage;
     CartillaService cartilla;
 
@@ -55,7 +65,7 @@ class CartillaServiceTest {
     @BeforeEach
     void datos() {
         storage = new DocumentStorage(almacen);
-        cartilla = new CartillaService(records, documents, storage);
+        cartilla = new CartillaService(records, documents, storage, audit, emergencia, reloj);
         when(records.findByIdAndPatientId(10L, ANA)).thenReturn(Optional.of(losartan));
         when(records.findByIdAndPatientId(11L, ANA)).thenReturn(Optional.of(lumbar));
         when(documents.findByRecordId(10L)).thenReturn(Optional.of(recetaPdf));
@@ -255,6 +265,146 @@ class CartillaServiceTest {
         when(documents.findInScope(receta, ANA, List.of(Category.MEDICAMENTOS))).thenReturn(Optional.of(recetaPdf));
         assertArrayEquals(new byte[] {1, 2, 3, 4},
                 cartilla.documentoAutorizado(ANA, List.of(Category.MEDICAMENTOS), receta).orElseThrow().contenido());
+    }
+
+    @Test
+    void corregirCambiaCategoriaFechaYOrigenPeroNoElTitulo() {
+        assertTrue(cartilla.corregir(ANA, 11L,
+                new Correccion(Category.OTROS, LocalDate.of(2026, 4, 30), "  "), null));
+        assertEquals(Category.OTROS, lumbar.getCategory());
+        assertEquals(LocalDate.of(2026, 4, 30), lumbar.getDocumentDate());
+        assertNull(lumbar.getOriginInstitution());
+        assertEquals("Dolor lumbar recurrente", lumbar.getTitle());
+        assertEquals(reloj.instant(), ReflectionTestUtils.getField(lumbar, "updatedAt"));
+    }
+
+    @Test
+    void unRegistroAjenoNoSeCorrigeNiSeElimina() {
+        // HU-05, criterio 3: el repositorio filtra por dueña; para otra paciente el registro no existe.
+        Correccion otra = new Correccion(Category.OTROS, LocalDate.of(2026, 1, 1), "X");
+        assertFalse(cartilla.corregir(OTRA, 10L, otra, null));
+        assertFalse(cartilla.eliminar(OTRA, 10L));
+        assertEquals(Category.MEDICAMENTOS, losartan.getCategory());
+        verify(records, never()).delete(any());
+        verify(audit, never()).save(any());
+        assertTrue(Files.exists(almacen.resolve(receta.toString())));
+    }
+
+    @Test
+    void corregirUnRegistroSinDocumentoLeAdjuntaElPapel() throws Exception {
+        // DEC-40: «Fotografiar el papel»; la procedencia pasa sola a con documento.
+        byte[] pdf = "%PDF-1.4 sintetico".getBytes();
+        cartilla.corregir(ANA, 11L, new Correccion(Category.DIAGNOSTICOS, LocalDate.of(2026, 5, 6), null),
+                DocumentUpload.of("lumbar.pdf", pdf).orElseThrow());
+        ArgumentCaptor<Document> doc = ArgumentCaptor.forClass(Document.class);
+        verify(documents).save(doc.capture());
+        assertEquals(11L, doc.getValue().getRecordId());
+        assertArrayEquals(pdf, Files.readAllBytes(almacen.resolve(doc.getValue().getStoragePath().toString())));
+    }
+
+    @Test
+    void corregirNoReemplazaElDocumentoQueYaTenia() {
+        cartilla.corregir(ANA, 10L, new Correccion(Category.MEDICAMENTOS, LocalDate.of(2026, 1, 12), null),
+                DocumentUpload.of("otra.pdf", "%PDF-1.4 otra".getBytes()).orElseThrow());
+        verify(documents, never()).save(any());
+    }
+
+    @Test
+    void eliminarAnotaEnLaBitacoraYNoTocaLoAnterior() {
+        // CP-07: borrar el registro agrega REGISTRO_ELIMINADO. AuditRepository no tiene métodos para
+        // borrar ni cambiar filas, así que lo anterior no puede bajar; aquí se comprueba que se agrega una.
+        assertTrue(cartilla.eliminar(ANA, 10L));
+        verify(records).delete(losartan);
+        ArgumentCaptor<AuditEntry> entrada = ArgumentCaptor.forClass(AuditEntry.class);
+        verify(audit).save(entrada.capture());
+        assertEquals(AuditEntry.Type.REGISTRO_ELIMINADO, entrada.getValue().getType());
+        assertEquals(ANA, entrada.getValue().getPatientId());
+        assertEquals("Eliminaste «Losartán 50 mg», de Medicamentos y alergias", entrada.getValue().getDetail());
+        assertEquals(reloj.instant(), entrada.getValue().getCreatedAt());
+    }
+
+    @Test
+    void elArchivoSeBorraSoloSiLaEliminacionSeConfirma() {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            cartilla.eliminar(ANA, 10L);
+            assertTrue(Files.exists(almacen.resolve(receta.toString())), "antes del commit el archivo sigue");
+            for (TransactionSynchronization s : TransactionSynchronizationManager.getSynchronizations()) {
+                s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+            }
+            assertTrue(Files.exists(almacen.resolve(receta.toString())), "si se deshace, el archivo sigue");
+            for (TransactionSynchronization s : TransactionSynchronizationManager.getSynchronizations()) {
+                s.afterCommit();
+            }
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        assertFalse(Files.exists(almacen.resolve(receta.toString())));
+    }
+
+    @Test
+    void unaFechaPosteriorAHoyEsFutura() {
+        // DEC-39, con el reloj fijo en el 26 de octubre de 2026.
+        assertFalse(cartilla.esFutura(LocalDate.of(2026, 10, 26)));
+        assertTrue(cartilla.esFutura(LocalDate.of(2026, 10, 27)));
+        assertFalse(cartilla.esFutura(null));
+    }
+
+    @Test
+    void unaFichaVaciaNoExponeNingunDatoNiLeeLosRegistros() {
+        // CP-13 (HU-06, criterio 4; verificación de H9 en PLAN.md): sin nada marcado, vista vacía.
+        when(emergencia.findByPatientId(ANA)).thenReturn(List.of());
+        assertTrue(cartilla.fichaParaUrgencias(ANA).isEmpty());
+        verify(records, never()).findByPatientIdAndIdIn(any(), anyCollection());
+        verify(records, never()).findByPatientIdOrderByDocumentDateDescIdDesc(any());
+        verify(documents, never()).findByRecordIdIn(anyCollection());
+    }
+
+    @Test
+    void laFichaParaUrgenciasLlevaSoloLoMarcadoSinDocumentos() {
+        when(emergencia.findByPatientId(ANA)).thenReturn(List.of(new EmergencyItem(ANA, 10L)));
+        when(records.findByPatientIdAndIdIn(ANA, List.of(10L))).thenReturn(List.of(losartan));
+        var ficha = cartilla.fichaParaUrgencias(ANA);
+        assertEquals(List.of(new CartillaService.LineaUrgencias("medicamentos y alergias", "Losartán 50 mg", "Enero 2026")), ficha);
+        verify(documents, never()).findByRecordId(any());
+    }
+
+    @Test
+    void laConfiguracionMuestraTodosLosRegistrosYCualesVanEnLaFicha() {
+        when(records.findByPatientIdOrderByDocumentDateDescIdDesc(ANA)).thenReturn(List.of(lumbar, losartan));
+        when(emergencia.findByPatientId(ANA)).thenReturn(List.of(new EmergencyItem(ANA, 10L)));
+        var ficha = cartilla.ficha(ANA);
+        // Por categoría, como la cartilla: diagnósticos antes que medicamentos.
+        assertEquals(List.of(11L, 10L), ficha.lineas().stream().map(CartillaService.LineaFicha::registroId).toList());
+        assertFalse(ficha.lineas().get(0).marcada());
+        assertTrue(ficha.lineas().get(1).marcada());
+        assertEquals("Losartán 50 mg", ficha.marcadas());
+        assertFalse(ficha.vacia());
+    }
+
+    @Test
+    void guardarLaFichaDescartaLoAjenoYSoloCambiaLoQueCambio() {
+        // Ana tenía Losartán (10); ahora marca el lumbar (11) y un id de otra paciente (99).
+        EmergencyItem teniaLosartan = new EmergencyItem(ANA, 10L);
+        when(emergencia.findByPatientId(ANA)).thenReturn(List.of(teniaLosartan));
+        when(records.findByPatientIdAndIdIn(ANA, List.of(11L, 99L))).thenReturn(List.of(lumbar));
+
+        cartilla.guardarFicha(ANA, List.of(11L, 99L));
+
+        verify(emergencia).delete(teniaLosartan);
+        ArgumentCaptor<EmergencyItem> nuevo = ArgumentCaptor.forClass(EmergencyItem.class);
+        verify(emergencia).save(nuevo.capture());
+        assertEquals(11L, nuevo.getValue().getRecordId());
+        assertEquals(ANA, nuevo.getValue().getPatientId());
+    }
+
+    @Test
+    void guardarLaFichaSinNadaLaVacia() {
+        EmergencyItem teniaLosartan = new EmergencyItem(ANA, 10L);
+        when(emergencia.findByPatientId(ANA)).thenReturn(List.of(teniaLosartan));
+        cartilla.guardarFicha(ANA, List.of());
+        verify(emergencia).delete(teniaLosartan);
+        verify(emergencia, never()).save(any());
     }
 
     private static Record record(Long id, Long patientId, Category category, String title, LocalDate date, String institution) {

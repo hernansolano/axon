@@ -12,11 +12,11 @@ import pa.axon.domain.Category;
  * UI.md, tal cual. El documento no está aquí: llega como archivo aparte a {@link PatientController}.
  * No hay campo de paciente: el registro es siempre de la sesión (RS-02). Los textos llegan sin
  * caracteres de control, que PostgreSQL rechaza (un carácter nulo daría un 500), y la fecha tiene un rango
- * provisional (P-20) que revisa el controlador.
+ * (DEC-39) que revisa el controlador: antes de 1900 cuenta como faltante y después de hoy tiene su mensaje.
  */
 public class RecordForm {
 
-    /** Rango provisional de la fecha del papel (P-20): fuera de él la base guarda absurdos o falla. */
+    /** Límites técnicos de la fecha (DEC-26): fuera de ellos la base guarda absurdos o falla. Hoy lo pone DEC-39. */
     static final LocalDate FECHA_MIN = LocalDate.of(1900, 1, 1);
     static final LocalDate FECHA_MAX = LocalDate.of(2100, 12, 31);
 

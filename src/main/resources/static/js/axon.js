@@ -72,13 +72,15 @@ document.addEventListener('click', function (event) {
 // la cámara del sistema sin pedir HTTPS; nada de getUserMedia. «Otro archivo» no lleva capture, así
 // el teléfono ofrece la galería, sus archivos o un PDF (DEC-27). Queda adjunto uno solo, y el botón
 // dice si el registro se guardará con documento o sin él. Tipo y tope de 10 MB los vuelve a revisar
-// el servidor por el contenido: aquí solo se avisa antes de mandar el archivo.
+// el servidor por el contenido: aquí solo se avisa antes de mandar el archivo. Corregir (H8, DEC-40)
+// usa el mismo formulario: trae sus textos del botón y, si el registro ya tiene documento, no hay captura.
 (function () {
   var form = document.querySelector('[data-agregar]');
   if (!form) return;
   var MAX_BYTES = 10 * 1024 * 1024;
   var TIPOS = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
   var foto = form.querySelector('#foto');
+  if (!foto) return;
   var otro = form.querySelector('#archivo');
   var sinDocumento = form.querySelector('[data-sin-documento]');
   var conDocumento = form.querySelector('[data-con-documento]');
@@ -88,6 +90,8 @@ document.addEventListener('click', function (event) {
   var avisoPeso = form.querySelector('[data-aviso-peso]');
   var avisoTipo = form.querySelector('[data-aviso-tipo]');
   var guardar = form.querySelector('[data-guardar]');
+  var textoSin = form.getAttribute('data-texto-sin') || 'Guardar sin documento';
+  var textoCon = form.getAttribute('data-texto-con') || 'Guardar con documento';
   var url = null;
 
   function mostrarHoja() {
@@ -103,7 +107,7 @@ document.addEventListener('click', function (event) {
     vista.removeAttribute('src');
     sinDocumento.hidden = !!archivo;
     conDocumento.hidden = !archivo;
-    guardar.textContent = archivo ? 'Guardar con documento' : 'Guardar sin documento';
+    guardar.textContent = archivo ? textoCon : textoSin;
     if (!archivo) return;
     var imagen = archivo.type.indexOf('image/') === 0;
     texto.textContent = input === foto ? 'Foto tomada'
@@ -273,4 +277,27 @@ document.addEventListener('click', function (event) {
   }
 
   var reloj = setInterval(preguntar, 5000);
+})();
+
+// Ficha de emergencia (HU-06, UI.md 12). Mientras la paciente marca, el resumen dice qué verá urgencias,
+// con las mismas palabras que arma el servidor (CartillaService.unir); sin nada marcado, que no se verá nada.
+// La ficha solo cambia al guardar.
+(function () {
+  var form = document.querySelector('[data-ficha]');
+  if (!form) return;
+  var casillas = Array.prototype.slice.call(form.querySelectorAll('input[name=registro]'));
+  var con = form.querySelector('[data-resumen-con]');
+  var vacio = form.querySelector('[data-resumen-vacio]');
+  var lista = form.querySelector('[data-resumen-lista]');
+
+  function actualizar() {
+    var marcados = casillas.filter(function (c) { return c.checked; })
+      .map(function (c) { return c.getAttribute('data-dato'); });
+    lista.textContent = marcados.join(', ');
+    con.hidden = marcados.length === 0;
+    vacio.hidden = marcados.length > 0;
+  }
+
+  casillas.forEach(function (c) { c.addEventListener('change', actualizar); });
+  actualizar();
 })();

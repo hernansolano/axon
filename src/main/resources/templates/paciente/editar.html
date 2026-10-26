@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/paciente-marco :: marco('Corregir el registro', 'cartilla', ~{::main})}">
+<body>
+<!--/* H8 (HU-05): corregir categoría, fecha y origen, con los campos y los mensajes de agregar (UI.md 07
+       y 07b). El título no se corrige. Si el registro no tiene documento, aquí se adjunta (DEC-40) con la
+       misma zona de captura; si ya tiene, no se ofrece reemplazarlo. Lo que falta lo lista el servidor. */-->
+<main class="app-main">
+    <div class="page">
+        <a class="back-link" th:href="@{/cartilla/{id}(id=${registro.id})}" data-testid="corregir-cancelar">
+            <span class="icon" aria-hidden="true">close</span>Cancelar
+        </a>
+
+        <div class="page-head">
+            <div class="stack">
+                <span class="eyebrow">Corregir</span>
+                <h1 class="title-serif" th:text="${registro.titulo}" data-testid="corregir-titulo">Losartán 50 mg</h1>
+                <p class="lede">Corrige de qué se trata, la fecha o dónde te lo dieron.</p>
+            </div>
+        </div>
+
+        <form class="add" th:action="@{/cartilla/{id}/editar(id=${registro.id})}" th:object="${form}" method="post"
+              enctype="multipart/form-data" novalidate data-agregar
+              data-texto-sin="Guardar la corrección" data-texto-con="Guardar con documento">
+            <div class="add-doc" th:unless="${registro.conDocumento()}">
+                <div class="add-doc" data-sin-documento>
+                    <label class="capture" for="foto" data-testid="tomar-foto">
+                        <span class="capture-disc"><span class="icon" aria-hidden="true">photo_camera</span></span>
+                        <span class="capture-title">Fotografiar el papel</span>
+                        <span class="capture-sub">Se abre la cámara del navegador</span>
+                    </label>
+                    <input class="sr-only" id="foto" name="foto" type="file" accept="image/*" capture="environment"
+                           data-testid="campo-foto">
+                    <label class="attach-pdf" for="archivo" data-testid="adjuntar-archivo">
+                        <span class="icon" aria-hidden="true">attach_file</span>O adjunta otro archivo
+                    </label>
+                    <input class="sr-only" id="archivo" name="archivo" type="file"
+                           accept="image/jpeg,image/png,image/webp,application/pdf" data-testid="campo-archivo">
+                    <span class="add-hint" data-testid="formatos-aceptados">JPG, PNG, WebP o PDF · hasta 10 MB</span>
+                    <div class="alert" role="alert" data-aviso-peso data-testid="alerta-documento-pesado" hidden>
+                        <span class="icon fill" aria-hidden="true">error</span>
+                        <div><span class="alert-body">El documento pesa más de 10 MB.</span></div>
+                    </div>
+                    <div class="alert" role="alert" data-aviso-tipo data-testid="alerta-documento-tipo" hidden>
+                        <span class="icon fill" aria-hidden="true">error</span>
+                        <div><span class="alert-body">El documento tiene que ser una foto (JPG, PNG o WebP) o un PDF.</span></div>
+                    </div>
+                    <div class="add-note">
+                        <span class="icon" aria-hidden="true">info</span>
+                        <span>Lo escribiste tú, sin adjuntar el papel. Si lo adjuntas ahora, el médico lo verá con documento.</span>
+                    </div>
+                </div>
+
+                <div class="add-doc" data-con-documento data-testid="documento-adjunto" hidden>
+                    <div class="attached-art">
+                        <img data-adjunto-vista alt="La imagen que vas a guardar" hidden>
+                        <div class="empty-sheet" data-adjunto-hoja aria-hidden="true">
+                            <span></span><span style="width:90%"></span><span style="width:75%"></span><span style="width:82%"></span>
+                        </div>
+                        <span class="attached-label">
+                            <span class="icon fill" aria-hidden="true">check_circle</span><span data-adjunto-texto>Foto tomada</span>
+                        </span>
+                    </div>
+                    <button type="button" class="add-remove" data-quitar-documento data-testid="quitar-documento">
+                        <span class="icon" aria-hidden="true">close</span>Quitar
+                    </button>
+                </div>
+            </div>
+
+            <div class="card add-form">
+                <div class="alert" th:if="${!problemas.isEmpty() or !faltan.isEmpty()}" role="alert"
+                     data-testid="alerta-faltan-datos">
+                    <span class="icon fill" aria-hidden="true">error</span>
+                    <div>
+                        <span class="alert-body" th:each="problema : ${problemas}" th:text="${problema}"
+                              data-testid="problema-registro"></span>
+                        <th:block th:unless="${faltan.isEmpty()}">
+                            <span class="alert-title">Para guardarlo nos faltan estos datos:</span>
+                            <span class="alert-body" th:each="falta : ${faltan}" th:text="${falta.value}"
+                                  th:attr="data-testid='falta-' + ${falta.key}"></span>
+                        </th:block>
+                    </div>
+                </div>
+
+                <fieldset class="cat-field">
+                    <legend>Qué es</legend>
+                    <div class="cat-options">
+                        <label class="cat-option" th:each="c : ${categorias}" th:attr="data-testid='categoria-' + ${c.slug}">
+                            <input class="sr-only" type="radio" th:field="*{categoria}" th:value="${c}">
+                            <span class="icon cat-icon" aria-hidden="true" th:text="${c.icon}">vaccines</span>
+                            <span class="cat-name" th:text="${c.label}">Vacunas</span>
+                            <span class="icon fill cat-check" aria-hidden="true">check_circle</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="add-row">
+                    <div class="field">
+                        <label for="fecha">Cuándo se lo dieron</label>
+                        <input class="input" type="date" th:field="*{fecha}" min="1900-01-01" th:max="${hoy}"
+                               data-testid="campo-fecha">
+                    </div>
+                    <div class="field">
+                        <label for="institucion">Dónde se lo dieron</label>
+                        <input class="input" type="text" th:field="*{institucion}" maxlength="160"
+                               placeholder="Clínica del Este" data-testid="campo-institucion">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block" data-guardar data-testid="boton-guardar">Guardar la corrección</button>
+            </div>
+        </form>
+    </div>
+    <script th:src="@{/js/axon.js}" defer></script>
+</main>
+</body>
+</html>

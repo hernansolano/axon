@@ -11,6 +11,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.CrossOriginResourcePolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import pa.axon.domain.PatientRepository;
 import pa.axon.domain.ProfessionalRepository;
 import pa.axon.security.AccountType;
@@ -51,11 +54,33 @@ public class SecurityConfig {
         return provider;
     }
 
+    /**
+     * Lo que ZAP pidió en su primer baseline (PB-16, DEC-43). Todo sale de la misma app: los documentos y
+     * la vista previa de la foto se muestran desde blob:, y v4 usa algunos estilos en línea. La cámara no
+     * se limita: el input con capture abre la del sistema.
+     */
+    public static final String CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            + "img-src 'self' blob: data:; frame-src blob:; object-src 'none'; base-uri 'self'; "
+            + "form-action 'self'; frame-ancestors 'none'";
+
+    public static final String PERMISSIONS = "geolocation=(), microphone=(), payment=(), usb=()";
+
+    private static void cabeceras(HttpSecurity http) throws Exception {
+        http.headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(CSP))
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", PERMISSIONS))
+                .crossOriginOpenerPolicy(coop -> coop.policy(
+                        CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy.SAME_ORIGIN))
+                .crossOriginResourcePolicy(corp -> corp.policy(
+                        CrossOriginResourcePolicyHeaderWriter.CrossOriginResourcePolicy.SAME_ORIGIN)));
+    }
+
     @Bean
     @Order(1)
     SecurityFilterChain professionalChain(HttpSecurity http,
             @Qualifier("professionalAuthProvider") AuthenticationProvider provider,
             LoginAttemptService attempts) throws Exception {
+        cabeceras(http);
         http
                 .securityMatcher("/pro", "/pro/**")
                 .authenticationProvider(provider)
@@ -80,6 +105,7 @@ public class SecurityConfig {
     SecurityFilterChain patientChain(HttpSecurity http,
             @Qualifier("patientAuthProvider") AuthenticationProvider provider,
             LoginAttemptService attempts) throws Exception {
+        cabeceras(http);
         http
                 .authenticationProvider(provider)
                 .authorizeHttpRequests(auth -> auth

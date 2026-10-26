@@ -26,8 +26,14 @@ public interface RecordRepository extends Repository<Record, Long> {
     /** Lo que ve el profesional: el filtro por alcance va en la consulta, no en la vista (RS-04, HU-08). */
     List<Record> findByPatientIdAndCategoryInOrderByDocumentDateDescIdDesc(Long patientId, Collection<Category> categories);
 
+    /** Solo los de esa paciente entre los ids pedidos: un id ajeno simplemente no vuelve (RS-02). */
+    List<Record> findByPatientIdAndIdIn(Long patientId, Collection<Long> ids);
+
     /** Un registro ajeno y uno que no existe dan lo mismo: vacío. */
     Optional<Record> findByIdAndPatientId(Long id, Long patientId);
 
     Record save(Record record);
+
+    /** HU-05. El documento cae con el registro (ON DELETE CASCADE); la bitácora no lo referencia y no se toca. */
+    void delete(Record record);
 }

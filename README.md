@@ -17,7 +17,9 @@ decida quién los ve, qué parte y por cuánto tiempo.
 
 - Organiza sus registros por categoría (diagnósticos, medicamentos, laboratorios, vacunas y otros),
   cada uno con su procedencia: si lo declaró él mismo o si viene respaldado por un documento.
-- Adjunta una foto o un PDF del documento original.
+- Adjunta una foto o un PDF del documento original, también después, a un registro que guardó sin él.
+- Corrige o elimina sus registros; eliminar no borra el historial de quién los consultó.
+- Prepara su ficha de emergencia: elige, línea por línea, lo único que vería un médico de urgencias.
 - Comparte categorías concretas con un profesional por un tiempo limitado, mediante un código corto
   que queda ligado al profesional que lo canjea.
 - Revoca cualquier permiso en el momento.
@@ -35,7 +37,8 @@ decida quién los ve, qué parte y por cuánto tiempo.
 > autenticado, permiso válido, categoría dentro del alcance y vigencia activa.
 
 No existe un buscador de pacientes. El control se aplica en el servidor, y cada acceso, denegación
-y revocación queda registrado para que el paciente lo vea.
+y revocación queda registrado para que el paciente lo vea. Cada cambio pasa por pruebas automáticas,
+también en el navegador, y por un análisis de seguridad.
 
 ---
 

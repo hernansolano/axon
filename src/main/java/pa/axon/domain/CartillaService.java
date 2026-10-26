@@ -1,14 +1,18 @@
 package pa.axon.domain;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -22,7 +26,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * detalle de cada registro y sus documentos. El filtro por paciente ocurre en la consulta, antes de
  * construir el modelo de la vista. Lo ajeno y lo inexistente devuelven lo mismo, vacío, para que
  * nadie pueda confirmar que un registro o un documento existe (RS-02, RS-13). También guarda los
- * registros nuevos de la paciente (HU-03).
+ * registros nuevos de la paciente (HU-03), los corrige o los elimina (HU-05), y arma su ficha de emergencia
+ * con los que ella marca (HU-06).
  */
 @Service
 public class CartillaService {
@@ -32,11 +37,18 @@ public class CartillaService {
     private final RecordRepository records;
     private final DocumentRepository documents;
     private final DocumentStorage storage;
+    private final AuditRepository audit;
+    private final EmergencyItemRepository emergencia;
+    private final Clock clock;
 
-    public CartillaService(RecordRepository records, DocumentRepository documents, DocumentStorage storage) {
+    public CartillaService(RecordRepository records, DocumentRepository documents, DocumentStorage storage,
+                           AuditRepository audit, EmergencyItemRepository emergencia, Clock clock) {
         this.records = records;
         this.documents = documents;
         this.storage = storage;
+        this.audit = audit;
+        this.emergencia = emergencia;
+        this.clock = clock;
     }
 
     /** {@code documentoId} solo lo lleva la vista del profesional, que abre el documento por su propia ruta. */
@@ -169,22 +181,180 @@ public class CartillaService {
         String institucion = nuevo.institucion() == null || nuevo.institucion().isBlank() ? null : nuevo.institucion();
         Record record = records.save(new Record(patientId, nuevo.categoria(), nuevo.titulo(), null, nuevo.fecha(), institucion));
         if (documento != null) {
-            UUID storagePath = UUID.randomUUID();
-            documents.save(new Document(record.getId(), documento.originalName(), documento.mimeType(),
-                    storagePath, documento.content().length));
+            guardarDocumento(record.getId(), documento);
+        }
+        return record.getId();
+    }
+
+    /** Hoy sale del mismo reloj que todo lo demás (DEC-28). */
+    public LocalDate hoy() {
+        return LocalDate.now(clock);
+    }
+
+    /** DEC-39: la cartilla guarda lo que ya pasó. */
+    public boolean esFutura(LocalDate fecha) {
+        return fecha != null && fecha.isAfter(hoy());
+    }
+
+    /** Lo que se puede corregir de un registro (HU-05, criterio 1). La institución puede venir vacía. */
+    public record Correccion(Category categoria, LocalDate fecha, String institucion) {
+    }
+
+    /** Los valores actuales, para llenar el formulario de corregir. Ajeno o inexistente: vacío. */
+    @Transactional(readOnly = true)
+    public Optional<Correccion> correccion(Long patientId, Long recordId) {
+        return records.findByIdAndPatientId(recordId, patientId)
+                .map(r -> new Correccion(r.getCategory(), r.getDocumentDate(), r.getOriginInstitution()));
+    }
+
+    /**
+     * HU-05: corrige categoría, fecha y origen de un registro de la paciente. Si el registro no tenía
+     * documento, puede llegar uno (DEC-40, «Fotografiar el papel»), y la procedencia cambia sola. Si ya
+     * tenía, el que llegue se ignora: el documento original no se reemplaza. Falso si el registro es
+     * ajeno o no existe; el controlador responde 404 en los dos casos.
+     */
+    @Transactional
+    public boolean corregir(Long patientId, Long recordId, Correccion correccion, DocumentUpload documento) {
+        Optional<Record> found = records.findByIdAndPatientId(recordId, patientId);
+        if (found.isEmpty()) {
+            return false;
+        }
+        Record record = found.get();
+        String institucion = correccion.institucion() == null || correccion.institucion().isBlank()
+                ? null : correccion.institucion();
+        record.corregir(correccion.categoria(), correccion.fecha(), institucion, clock.instant());
+        if (documento != null && documents.findByRecordId(recordId).isEmpty()) {
+            guardarDocumento(recordId, documento);
+        }
+        return true;
+    }
+
+    /**
+     * HU-05: elimina un registro de la paciente. Sale de la cartilla y de todo permiso vigente, porque
+     * la consulta del profesional lee la base en cada carga. Se anota REGISTRO_ELIMINADO y no se toca
+     * ningún evento anterior (RS-07, CP-07). El archivo se borra solo después del commit: si algo falla,
+     * el registro y su documento siguen como estaban. Falso si es ajeno o no existe.
+     */
+    @Transactional
+    public boolean eliminar(Long patientId, Long recordId) {
+        Optional<Record> found = records.findByIdAndPatientId(recordId, patientId);
+        if (found.isEmpty()) {
+            return false;
+        }
+        Record record = found.get();
+        Optional<UUID> archivo = documents.findByRecordId(recordId).map(Document::getStoragePath);
+        records.delete(record);
+        audit.save(new AuditEntry(patientId, AuditEntry.Type.REGISTRO_ELIMINADO, null, null,
+                List.of(record.getCategory()),
+                "Eliminaste «" + record.getTitle() + "», de " + record.getCategory().getLabel(), clock.instant()));
+        archivo.ifPresent(storagePath -> {
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
-                    public void afterCompletion(int status) {
-                        if (status == STATUS_ROLLED_BACK) {
-                            storage.delete(storagePath);
-                        }
+                    public void afterCommit() {
+                        storage.delete(storagePath);
                     }
                 });
+            } else {
+                storage.delete(storagePath);
             }
-            storage.save(storagePath, documento.content());
+        });
+        return true;
+    }
+
+    /** Una línea de la ficha: la etiqueta es la categoría, el dato es el título (UI.md 12, DEC-42). */
+    public record LineaFicha(Long registroId, String etiqueta, String dato, boolean marcada) {
+    }
+
+    /** La ficha como la configura la paciente: todos sus registros, cuáles marcó, y esos unidos para el resumen. */
+    public record FichaConfig(List<LineaFicha> lineas, String marcadas) {
+        public boolean vacia() {
+            return lineas.stream().noneMatch(LineaFicha::marcada);
         }
-        return record.getId();
+    }
+
+    /** Lo único que verá urgencias: etiqueta, dato y fecha de lo marcado; ni ids, ni documentos, ni el resto. */
+    public record LineaUrgencias(String etiqueta, String dato, String fecha) {
+    }
+
+    @Transactional(readOnly = true)
+    public FichaConfig ficha(Long patientId) {
+        Set<Long> marcados = emergencia.findByPatientId(patientId).stream()
+                .map(EmergencyItem::getRecordId).collect(Collectors.toSet());
+        List<LineaFicha> lineas = records.findByPatientIdOrderByDocumentDateDescIdDesc(patientId).stream()
+                .sorted(Comparator.comparing(Record::getCategory))
+                .map(r -> new LineaFicha(r.getId(), r.getCategory().getLabel().toLowerCase(Locale.ROOT), r.getTitle(),
+                        marcados.contains(r.getId())))
+                .toList();
+        return new FichaConfig(lineas, unir(lineas.stream().filter(LineaFicha::marcada).map(LineaFicha::dato).toList()));
+    }
+
+    /**
+     * HU-06: la ficha queda con exactamente lo marcado. Solo cuentan los registros de esta paciente: un
+     * id ajeno o inexistente se descarta sin decir nada (RS-02). Se borra lo desmarcado y se agrega lo
+     * nuevo, sin tocar lo que sigue igual.
+     */
+    @Transactional
+    public void guardarFicha(Long patientId, Collection<Long> recordIds) {
+        Set<Long> propios = recordIds.isEmpty() ? Set.of()
+                : records.findByPatientIdAndIdIn(patientId, recordIds).stream().map(Record::getId).collect(Collectors.toSet());
+        List<EmergencyItem> actuales = emergencia.findByPatientId(patientId);
+        Set<Long> yaEstan = new HashSet<>();
+        for (EmergencyItem item : actuales) {
+            if (propios.contains(item.getRecordId())) {
+                yaEstan.add(item.getRecordId());
+            } else {
+                emergencia.delete(item);
+            }
+        }
+        propios.stream().filter(id -> !yaEstan.contains(id)).sorted()
+                .forEach(id -> emergencia.save(new EmergencyItem(patientId, id)));
+    }
+
+    /**
+     * Lo que se mostrará en urgencias (HU-12 la abrirá en el Sprint 7). Una ficha sin nada marcado
+     * devuelve una lista vacía sin leer un solo registro (CP-13, RS-08).
+     */
+    @Transactional(readOnly = true)
+    public List<LineaUrgencias> fichaParaUrgencias(Long patientId) {
+        List<Long> ids = emergencia.findByPatientId(patientId).stream().map(EmergencyItem::getRecordId).toList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return records.findByPatientIdAndIdIn(patientId, ids).stream()
+                .sorted(Comparator.comparing(Record::getCategory))
+                .map(r -> {
+                    String fecha = r.getDocumentDate().format(MES_ANIO);
+                    return new LineaUrgencias(r.getCategory().getLabel().toLowerCase(Locale.ROOT), r.getTitle(),
+                            Character.toUpperCase(fecha.charAt(0)) + fecha.substring(1));
+                })
+                .toList();
+    }
+
+    /** Lo que va en negrita en el resumen de UI.md 12, separado por comas como en v4. Vacío si no hay nada. */
+    static String unir(List<String> marcados) {
+        return String.join(", ", marcados);
+    }
+
+    /**
+     * El archivo se escribe al final, con su UUID como nombre: si falla, o si la transacción se deshace,
+     * se borra y no queda un registro que diga tener un documento que no está.
+     */
+    private void guardarDocumento(Long recordId, DocumentUpload documento) {
+        UUID storagePath = UUID.randomUUID();
+        documents.save(new Document(recordId, documento.originalName(), documento.mimeType(),
+                storagePath, documento.content().length));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        storage.delete(storagePath);
+                    }
+                }
+            });
+        }
+        storage.save(storagePath, documento.content());
     }
 
     private static String origin(Record r) {

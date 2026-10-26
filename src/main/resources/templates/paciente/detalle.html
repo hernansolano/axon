@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/paciente-marco :: marco(${registro.titulo}, 'cartilla', ~{::main})}">
 <body>
-<!--/* Pantallas 03 a 06 (UI.md) con el diseño v4 (DEC-09). Corregir, eliminar y adjuntar se conectan en H7 y H8. */-->
+<!--/* Pantallas 03 a 06 (UI.md) con el diseño v4 (DEC-09). Corregir, eliminar y adjuntar llegan con H8 (HU-05, DEC-40). */-->
 <main class="app-main">
     <div class="page">
         <a class="back-link" th:href="@{/cartilla}" data-testid="registro-volver">
@@ -42,9 +42,10 @@
                     <span class="disc" aria-hidden="true"><span class="icon">chat_bubble</span></span>
                     <strong>Sin documento</strong>
                     <p>Lo escribiste tú, sin adjuntar el papel. El médico lo verá marcado así. Si tienes el documento, adjúntalo.</p>
-                    <button type="button" class="btn btn-primary btn-sm" disabled data-testid="registro-adjuntar">
+                    <!--/* DEC-40: se adjunta desde corregir, con las mismas reglas que al agregar. */-->
+                    <a class="btn btn-primary btn-sm" th:href="@{/cartilla/{id}/editar(id=${registro.id})}" data-testid="registro-adjuntar">
                         <span class="icon" aria-hidden="true">photo_camera</span>Fotografiar el papel
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -81,13 +82,31 @@
                     <span>El documento se abre dentro de este registro y de tu sesión. No tiene un enlace propio que se pueda reenviar.</span>
                 </span>
 
-                <div class="detail-actions">
-                    <button type="button" class="btn btn-ghost btn-sm" disabled data-testid="registro-corregir">
+                <!--/* HU-05. Eliminar no borra: lleva a la confirmación, y solo el POST de ahí elimina. */-->
+                <div class="detail-actions" th:unless="${confirmarEliminar}">
+                    <a class="btn btn-ghost btn-sm" th:href="@{/cartilla/{id}/editar(id=${registro.id})}" data-testid="registro-corregir">
                         <span class="icon" aria-hidden="true">edit</span>Corregir
-                    </button>
-                    <button type="button" class="btn btn-ghost btn-sm btn-danger-ghost" disabled data-testid="registro-eliminar">
+                    </a>
+                    <a class="btn btn-ghost btn-sm btn-danger-ghost" th:href="@{/cartilla/{id}(id=${registro.id},eliminar='')}"
+                       data-testid="registro-eliminar">
                         <span class="icon" aria-hidden="true">delete</span>Eliminar
-                    </button>
+                    </a>
+                </div>
+
+                <div class="alert" th:if="${confirmarEliminar}" role="alertdialog" aria-labelledby="confirmar-titulo"
+                     data-testid="confirmar-eliminar">
+                    <span class="icon fill" aria-hidden="true">delete</span>
+                    <div>
+                        <span class="alert-title" id="confirmar-titulo">¿Eliminar este registro?</span>
+                        <span class="alert-body">Sale de tu cartilla y de los permisos que tienes vigentes. Lo que ya quedó en tu actividad no se borra.</span>
+                        <span class="alert-body" th:if="${registro.conDocumento()}">El documento también se borra.</span>
+                        <form class="detail-actions" th:action="@{/cartilla/{id}/eliminar(id=${registro.id})}" method="post">
+                            <button type="submit" class="btn btn-danger btn-sm" data-testid="boton-eliminar">
+                                <span class="icon" aria-hidden="true">delete</span>Sí, eliminar
+                            </button>
+                            <a class="btn btn-ghost btn-sm" th:href="@{/cartilla/{id}(id=${registro.id})}" data-testid="cancelar-eliminar">Cancelar</a>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

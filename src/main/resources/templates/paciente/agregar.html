@@ -103,7 +103,7 @@
                 <div class="add-row">
                     <div class="field">
                         <label for="fecha">Cuándo se lo dieron</label>
-                        <input class="input" type="date" th:field="*{fecha}" min="1900-01-01" max="2100-12-31"
+                        <input class="input" type="date" th:field="*{fecha}" min="1900-01-01" th:max="${hoy}"
                                data-testid="campo-fecha">
                     </div>
                     <div class="field">
